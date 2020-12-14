@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'studentdata.dart';
 import 'package:xml/xml.dart';
+import 'studentgradedata.dart';
 
 // void debugPrint(dynamic d) {
 //   print(d);
@@ -13,13 +15,13 @@ class StudentVueClient {
 
   final String username, password;
   final bool studentAccount;
-  StudentVueClient(this.username, this.password, this.domain, {this.studentAccount = true});
+  StudentVueClient(this.username, this.password, this.domain, {this.studentAccount = true}) {
+    reqURL = 'https://' + domain + '/Service/PXPCommunication.asmx?WSDL';
+  }
 
   final Dio _dio = Dio(BaseOptions(validateStatus: (_) => true));
 
-  Future<StudentVueData> loadGradebook({Function(double) callback}) async {
-
-    reqURL = 'https://' + domain + '/Service/PXPCommunication.asmx?WSDL';
+  Future<StudentGradeData> loadGradebook({Function(double) callback}) async {
 
     var requestData = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
@@ -60,19 +62,17 @@ class StudentVueClient {
 
 
     final document = XmlDocument.parse(HtmlUnescape().convert(res.data));
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // await Future.delayed(const Duration(milliseconds: 1500));
 //    final document = XmlDocument.parse(testData);
     if(res.data.toString().contains('Invalid user id or password')) {
-      return StudentVueData()..error = 'Invalid user id or password';
+      return StudentGradeData()..error = 'Invalid user id or password';
     }
     if(res.data.toString().contains('The user name or password is incorrect')) {
-      return StudentVueData()..error = 'The user name or password is incorrect';
+      return StudentGradeData()..error = 'The user name or password is incorrect';
     }
-    var currentMP = document.findAllElements('ReportingPeriod').first.getAttribute('GradePeriod');
+    // var currentMP = document.findAllElements('ReportingPeriod').first.getAttribute('GradePeriod');
 
-//    debugPrint('currentMP: ${currentMP}');
-
-    StudentVueData svData = StudentVueData();
+    StudentGradeData svData = StudentGradeData();
 
     XmlElement courses = document.findAllElements('Courses').first;
     List<SchoolClass> classes = List();
@@ -152,45 +152,77 @@ class StudentVueClient {
     return svData;
   }
 
-}
+  Future<StudentData> loadStudentData({Function(double) callback}) async {
 
-class StudentVueData {
-  List<SchoolClass> classes;
-  String studentName;
+    var requestData = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Body>
+        <ProcessWebServiceRequest xmlns="http://edupoint.com/webservices/">
+            <userID>$username</userID>
+            <password>$password</password>
+            <skipLoginLog>1</skipLoginLog>
+            <parent>${studentAccount ? '0' : '1'}</parent>
+            <webServiceHandleName>PXPWebServices</webServiceHandleName>
+            <methodName>StudentInfo</methodName>
+            <paramStr>&lt;Parms&gt;&lt;ChildIntID&gt;0&lt;/ChildIntID&gt;&lt;/Parms&gt;</paramStr>
+        </ProcessWebServiceRequest>
+    </soap:Body>
+</soap:Envelope>''';
 
-  String error;
 
-  StudentVueData({this.classes, this.studentName});
-}
+    var headers = <String, List<String>>{
+      'Content-Type' : ['text/xml']
+    };
 
-class SchoolClass {
-  String className, classTeacher, classTeacherEmail, markingPeriod, roomNumber, pctGrade;
-  double earnedPoints, possiblePoints;
-  int period;
-  List<AssignmentCategory> assignmentCategories;
-  List<Assignment> assignments;
+    var res = await _dio.post(
+        reqURL,
+        data: requestData,
+        options: Options(
+            headers: headers
+        ),
+        onSendProgress: (one, two) {
+          if (callback != null) {
+            callback((one / two) * 0.5);
+          }
+        },
+        onReceiveProgress: (one, two) {
+          if (callback != null) {
+            callback((one / two) * 0.5 + 0.5);
+          }
+        }
+    );
 
-  SchoolClass({this.className, this.classTeacher, this.classTeacherEmail, this.markingPeriod, this.period, this.earnedPoints, this.possiblePoints, this.assignmentCategories, this.assignments});
-}
+    final document = XmlDocument.parse(HtmlUnescape().convert(res.data));
+    print(HtmlUnescape().convert(res.data));
+    print('document: ${document.text}');
 
-class Assignment {
-  String assignmentName, date, category;
-  // earn points = -1 means grade not added
-  double earnedPoints, possiblePoints;
+    // the StudentInfo element is inside four other dumb elements
+    final el = document.root.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild;
 
-  Assignment({this.assignmentName, this.date, this.earnedPoints, this.possiblePoints});
-}
-
-class AssignmentCategory {
-  double earnedPoints;
-  double possiblePoints;
-  double weight;
-  String name;
-
-  AssignmentCategory({this.name, this.weight});
-
-  @override
-  String toString() {
-    return 'AssignmentCategory{earnedPoints: $earnedPoints, possiblePoints: $possiblePoints, weight: $weight, name: $name}';
+    return StudentData(
+      lockerInfo: el.getElement('LockerInfoRecords')?.innerText,
+      formattedName: el.getElement('FormattedName')?.innerText,
+      permId: el.getElement('PermID')?.innerText,
+      gender: el.getElement('Gender')?.innerText,
+      grade: el.getElement('Grade')?.innerText,
+      address: el.getElement('Address')?.innerText,
+      lastNameGoesBy: el.getElement('LastNameGoesBy')?.innerText,
+      nickname: el.getElement('NickName')?.innerText,
+      birthdate: el.getElement('BirthDate')?.innerText,
+      email: el.getElement('EMail')?.innerText,
+      phone: el.getElement('Phone')?.innerText,
+      homeLanguage: el.getElement('HomeLanguage')?.innerText,
+      currentSchool: el.getElement('CurrentSchool')?.innerText,
+      homeroomTeacher: el.getElement('HomeRoomTch')?.innerText,
+      homeroomTeacherEmail: el.getElement('HomeRoomTchEMail')?.innerText,
+      homeroom: el.getElement('HomeRoom')?.innerText,
+      counselorName: el.getElement('CounselorName')?.innerText,
+      photo: el.getElement('Photo')?.innerText,
+      physicianName: el.getElement('Physician')?.getAttribute('Name'),
+      physicianPhone: el.getElement('Physician')?.getAttribute('Phone'),
+      dentistName: el.getElement('Dentist')?.getAttribute('Name'),
+      dentistPhone: el.getElement('Dentist')?.getAttribute('Phone'),
+    );
   }
+
 }
