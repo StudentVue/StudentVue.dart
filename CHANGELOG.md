@@ -1,3 +1,5 @@
-## 0.0.2
+## 0.0.3
 
-- `StudentVueData` is now `StudentGradeData`
+- added a "mock" mode
+
+`StudentVueClient(mock: true)`

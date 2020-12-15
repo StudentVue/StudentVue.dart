@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'package:studentvueclient/src/mockresponses.dart';
 import 'studentdata.dart';
 import 'package:xml/xml.dart';
 import 'studentgradedata.dart';
@@ -13,9 +14,10 @@ class StudentVueClient {
   final domain;
   String reqURL;
 
+  final bool mock;
   final String username, password;
   final bool studentAccount;
-  StudentVueClient(this.username, this.password, this.domain, {this.studentAccount = true}) {
+  StudentVueClient(this.username, this.password, this.domain, {this.studentAccount = true, this.mock = false}) {
     reqURL = 'https://' + domain + '/Service/PXPCommunication.asmx?WSDL';
   }
 
@@ -23,51 +25,58 @@ class StudentVueClient {
 
   Future<StudentGradeData> loadGradebook({Function(double) callback}) async {
 
-    var requestData = '''<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-    <soap:Body>
-        <ProcessWebServiceRequest xmlns="http://edupoint.com/webservices/">
-            <userID>$username</userID>
-            <password>$password</password>
-            <skipLoginLog>1</skipLoginLog>
-            <parent>${studentAccount ? '0' : '1'}</parent>
-            <webServiceHandleName>PXPWebServices</webServiceHandleName>
-            <methodName>Gradebook</methodName>
-            <paramStr>&lt;Parms&gt;&lt;ChildIntID&gt;0&lt;/ChildIntID&gt;&lt;/Parms&gt;</paramStr>
-        </ProcessWebServiceRequest>
-    </soap:Body>
-</soap:Envelope>''';
+    String resData;
+    if(!mock) {
+      var requestData = '''<?xml version="1.0" encoding="utf-8"?>
+    <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+      <soap:Body>
+          <ProcessWebServiceRequest xmlns="http://edupoint.com/webservices/">
+              <userID>$username</userID>
+              <password>$password</password>
+              <skipLoginLog>1</skipLoginLog>
+              <parent>${studentAccount ? '0' : '1'}</parent>
+              <webServiceHandleName>PXPWebServices</webServiceHandleName>
+              <methodName>Gradebook</methodName>
+              <paramStr>&lt;Parms&gt;&lt;ChildIntID&gt;0&lt;/ChildIntID&gt;&lt;/Parms&gt;</paramStr>
+          </ProcessWebServiceRequest>
+      </soap:Body>
+    </soap:Envelope>''';
 
-    var headers = <String, List<String>>{
-      'Content-Type' : ['text/xml']
-    };
+      var headers = <String, List<String>>{
+        'Content-Type' : ['text/xml']
+      };
 
-    var res = await _dio.post(
-        reqURL,
-        data: requestData,
-        options: Options(
-            headers: headers
-        ),
-        onSendProgress: (one, two) {
-          if (callback != null) {
-            callback((one / two) * 0.5);
+      var res = await _dio.post(
+          reqURL,
+          data: requestData,
+          options: Options(
+              headers: headers
+          ),
+          onSendProgress: (one, two) {
+            if (callback != null) {
+              callback((one / two) * 0.5);
+            }
+          },
+          onReceiveProgress: (one, two) {
+            if (callback != null) {
+              callback((one / two) * 0.5 + 0.5);
+            }
           }
-        },
-        onReceiveProgress: (one, two) {
-          if (callback != null) {
-            callback((one / two) * 0.5 + 0.5);
-          }
-        }
-    );
+      );
+
+      resData = res.data;
+    } else {
+      resData = MockResponses.GradebookResponse;
+    }
 
 
-    final document = XmlDocument.parse(HtmlUnescape().convert(res.data));
+    final document = XmlDocument.parse(HtmlUnescape().convert(resData));
     // await Future.delayed(const Duration(milliseconds: 1500));
 //    final document = XmlDocument.parse(testData);
-    if(res.data.toString().contains('Invalid user id or password')) {
+    if(resData.contains('Invalid user id or password')) {
       return StudentGradeData()..error = 'Invalid user id or password';
     }
-    if(res.data.toString().contains('The user name or password is incorrect')) {
+    if(resData.contains('The user name or password is incorrect')) {
       return StudentGradeData()..error = 'The user name or password is incorrect';
     }
     // var currentMP = document.findAllElements('ReportingPeriod').first.getAttribute('GradePeriod');
@@ -154,47 +163,51 @@ class StudentVueClient {
 
   Future<StudentData> loadStudentData({Function(double) callback}) async {
 
-    var requestData = '''<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-    <soap:Body>
-        <ProcessWebServiceRequest xmlns="http://edupoint.com/webservices/">
-            <userID>$username</userID>
-            <password>$password</password>
-            <skipLoginLog>1</skipLoginLog>
-            <parent>${studentAccount ? '0' : '1'}</parent>
-            <webServiceHandleName>PXPWebServices</webServiceHandleName>
-            <methodName>StudentInfo</methodName>
-            <paramStr>&lt;Parms&gt;&lt;ChildIntID&gt;0&lt;/ChildIntID&gt;&lt;/Parms&gt;</paramStr>
-        </ProcessWebServiceRequest>
-    </soap:Body>
-</soap:Envelope>''';
+    String resData;
+    if(!mock) {
+      var requestData = '''<?xml version="1.0" encoding="utf-8"?>
+  <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+      <soap:Body>
+          <ProcessWebServiceRequest xmlns="http://edupoint.com/webservices/">
+              <userID>$username</userID>
+              <password>$password</password>
+              <skipLoginLog>1</skipLoginLog>
+              <parent>${studentAccount ? '0' : '1'}</parent>
+              <webServiceHandleName>PXPWebServices</webServiceHandleName>
+              <methodName>StudentInfo</methodName>
+              <paramStr>&lt;Parms&gt;&lt;ChildIntID&gt;0&lt;/ChildIntID&gt;&lt;/Parms&gt;</paramStr>
+          </ProcessWebServiceRequest>
+      </soap:Body>
+  </soap:Envelope>''';
 
 
-    var headers = <String, List<String>>{
-      'Content-Type' : ['text/xml']
-    };
+      var headers = <String, List<String>>{
+        'Content-Type' : ['text/xml']
+      };
 
-    var res = await _dio.post(
-        reqURL,
-        data: requestData,
-        options: Options(
-            headers: headers
-        ),
-        onSendProgress: (one, two) {
-          if (callback != null) {
-            callback((one / two) * 0.5);
+      var res = await _dio.post(
+          reqURL,
+          data: requestData,
+          options: Options(
+              headers: headers
+          ),
+          onSendProgress: (one, two) {
+            if (callback != null) {
+              callback((one / two) * 0.5);
+            }
+          },
+          onReceiveProgress: (one, two) {
+            if (callback != null) {
+              callback((one / two) * 0.5 + 0.5);
+            }
           }
-        },
-        onReceiveProgress: (one, two) {
-          if (callback != null) {
-            callback((one / two) * 0.5 + 0.5);
-          }
-        }
-    );
+      );
+      resData = res.data;
+    } else {
+      resData = MockResponses.StudentInfoResponse;
+    }
 
-    final document = XmlDocument.parse(HtmlUnescape().convert(res.data));
-    print(HtmlUnescape().convert(res.data));
-    print('document: ${document.text}');
+    final document = XmlDocument.parse(HtmlUnescape().convert(resData));
 
     // the StudentInfo element is inside four other dumb elements
     final el = document.root.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild;
