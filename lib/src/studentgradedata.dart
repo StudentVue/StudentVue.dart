@@ -13,7 +13,7 @@ class StudentGradeData {
 }
 
 class SchoolClass {
-  String className, classTeacher, classTeacherEmail, markingPeriod, roomNumber, pctGrade;
+  String className, classTeacher, classTeacherEmail, markingPeriod, roomNumber, pctGrade, letterGrade;
   double earnedPoints, possiblePoints;
   int period;
   List<AssignmentCategory> assignmentCategories;

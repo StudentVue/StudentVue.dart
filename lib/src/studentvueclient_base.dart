@@ -81,10 +81,10 @@ class StudentVueClient {
     }
     // var currentMP = document.findAllElements('ReportingPeriod').first.getAttribute('GradePeriod');
 
-    StudentGradeData svData = StudentGradeData();
+    var svData = StudentGradeData();
 
-    XmlElement courses = document.findAllElements('Courses').first;
-    List<SchoolClass> classes = List();
+    var courses = document.findAllElements('Courses').first;
+    var classes = List<SchoolClass>();
     for(int i = 0; i < courses.children.length; i++) {
       XmlNode current = courses.children[i];
 //      debugPrint('adding: $current');
@@ -99,6 +99,11 @@ class StudentVueClient {
       _class.classTeacher = current.getAttribute('Staff') ?? 'N/A';
       _class.classTeacherEmail = current.getAttribute('StaffEMail') ?? 'N/A';
 
+      var mark = current.findAllElements('Mark')?.first;
+      if(mark != null) {
+        _class.pctGrade = mark.getAttribute('CalculatedScoreRaw');
+        _class.letterGrade = mark.getAttribute('CalculatedScoreString');
+      }
       current = current.findAllElements('GradeCalculationSummary').first;
       if (current == null) {
         classes.add(_class);
@@ -110,7 +115,7 @@ class StudentVueClient {
         if(current.children[i].getAttribute('Type') == 'TOTAL') {
           _class.earnedPoints = double.tryParse(current.children[i].getAttribute('Points') ?? '');
           _class.earnedPoints = double.tryParse(current.children[i].getAttribute('PointsPossible') ?? '');
-          _class.pctGrade = current.children[i].getAttribute('WeightedPct');
+          _class.pctGrade ??= current.children[i].getAttribute('WeightedPct'); // replace only if it's already null
         } // else {
         AssignmentCategory category = AssignmentCategory();
         category.name = current.children[i].getAttribute('Type');
