@@ -510,4 +510,26 @@ class MockResponses {
      &lt;/UserDefinedGroupBoxes&gt;
 &lt;/StudentInfo&gt;</ProcessWebServiceRequestResult></ProcessWebServiceRequestResponse></soap:Body></soap:Envelope>''';
 
+  static final ZipCodeResponse = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <soap:Body>
+        <ProcessWebServiceRequestMultiWebResponse xmlns="http://edupoint.com/webservices/">
+            <ProcessWebServiceRequestMultiWebResult>&lt;DistrictLists xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt;
+     &lt;DistrictInfos&gt;
+          &lt;DistrictInfo DistrictID="" Name="Elk Grove Unified School District" Address="Elk Grove CA 95624" PvueURL="https://ca-egusd-psv.edupoint.com/" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Arcata Elementary School District" Address="Arcata CA 95521" PvueURL="https://ca-aesd.edupoint.com/" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Blue Lake Union Elementary" Address="Blue Lake CA 95525" PvueURL="https://ca-blu.edupoint.com/" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Cupertino Union School District" Address="Cupertino CA 95014" PvueURL="https://parentvue.cusdk8.org" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Nevada City School of the Arts" Address="Nevada City CA 95959" PvueURL="https://ca-ncsa.edupoint.com" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Nevada County Office of Education" Address="Grass Valley CA 95945" PvueURL="https://ca-njuk8.edupoint.com" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Nevada Joint Union High School District" Address="Grass Valley CA 95945" PvueURL="https://ca-nju.edupoint.com/" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Northern Humboldt Union High School District" Address="McKinleyville CA 95519" PvueURL="https://ca-nhu.edupoint.com" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Pajaro Valley Unified School District" Address="Watsonville CA 95076" PvueURL="https://ca-pvusd-psv.edupoint.com" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Rincon Valley Union School District" Address="Santa Rosa CA 95405" PvueURL="https://ca-rvusd.edupoint.com" /&gt;
+          &lt;DistrictInfo DistrictID="" Name="Stockton Unified School District" Address="Stockton CA 95202" PvueURL="https://sis.stocktonusd.net" /&gt;
+     &lt;/DistrictInfos&gt;
+&lt;/DistrictLists&gt;</ProcessWebServiceRequestMultiWebResult>
+        </ProcessWebServiceRequestMultiWebResponse>
+    </soap:Body>
+</soap:Envelope>''';
 }

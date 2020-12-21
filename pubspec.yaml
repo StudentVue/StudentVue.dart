@@ -1,6 +1,6 @@
 name: studentvueclient
 description: a client library for the student vue grade system
-version: 0.0.5
+version: 0.0.6
 repository: https://github.com/StudentVue/StudentVue.dart
 
 environment:

@@ -5,8 +5,9 @@ void main() async {
   print('loading data');
   var grades = await client.loadGradebook();
   print(grades.toString());
-  var studentData = await client.loadStudentData(callback: (pctLoaded) {
+  // this is static because you don't need a username and password for it
+  var studentData = await StudentVueClient.loadDistrictsFromZip('zip code', callback: (pctLoaded) {
     print('${pctLoaded * 100}% loaded');
-  });
+  }, mock: false);
   print(studentData.toString());
 }

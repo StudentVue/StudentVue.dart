@@ -1,3 +1,3 @@
-## 0.0.5
+## 0.0.6
 
-- add new primary way of getting SchoolClass.pctGrade
+- add district lookup by zip code

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:studentvueclient/src/mockresponses.dart';
+import 'package:studentvueclient/src/zip_code_result.dart';
 import 'studentdata.dart';
 import 'package:xml/xml.dart';
 import 'studentgradedata.dart';
@@ -241,6 +242,62 @@ class StudentVueClient {
       dentistName: el.getElement('Dentist')?.getAttribute('Name'),
       dentistPhone: el.getElement('Dentist')?.getAttribute('Phone'),
     );
+  }
+
+  static Future<List<ZipCodeResult>> loadDistrictsFromZip(String zip, {Function(double) callback, bool mock = false}) async {
+
+    String resData;
+    if(!mock) {
+      var requestData = '''<?xml version="1.0" encoding="utf-8"?>
+<v:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://www.w3.org/2001/XMLSchema" xmlns:c="http://schemas.xmlsoap.org/soap/encoding/" xmlns:v="http://schemas.xmlsoap.org/soap/envelope/">
+    <v:Header />
+    <v:Body>
+        <ProcessWebServiceRequestMultiWeb xmlns="http://edupoint.com/webservices/" id="o0" c:root="1">
+            <userID i:type="d:string">EdupointDistrictInfo</userID>
+            <password i:type="d:string">Edup01nt</password>
+            <skipLoginLog i:type="d:string">false</skipLoginLog>
+            <parent i:type="d:string">false</parent>
+            <webServiceHandleName i:type="d:string">HDInfoServices</webServiceHandleName>
+            <methodName i:type="d:string">GetMatchingDistrictList</methodName>
+            <paramStr i:type="d:string">&lt;Parms&gt;&lt;Key&gt;5E4B7859-B805-474B-A833-FDB15D205D40&lt;/Key&gt;&lt;MatchToDistrictZipCode&gt;$zip&lt;/MatchToDistrictZipCode&gt;&lt;/Parms&gt;</paramStr>
+            <webDBName i:type="d:string"></webDBName>
+        </ProcessWebServiceRequestMultiWeb>
+    </v:Body>
+</v:Envelope>''';
+
+
+      var headers = <String, List<String>>{
+        'Content-Type' : ['text/xml']
+      };
+
+      final _dio = Dio(BaseOptions(validateStatus: (_) => true));
+      var res = await _dio.post(
+          'https://support.edupoint.com/Service/HDInfoCommunication.asmx',
+          data: requestData,
+          options: Options(
+              headers: headers
+          ),
+          onSendProgress: (one, two) {
+            if (callback != null) {
+              callback((one / two) * 0.5);
+            }
+          },
+          onReceiveProgress: (one, two) {
+            if (callback != null) {
+              callback((one / two) * 0.5 + 0.5);
+            }
+          }
+      );
+      resData = res.data;
+    } else {
+      resData = MockResponses.ZipCodeResponse;
+    }
+
+    final document = XmlDocument.parse(HtmlUnescape().convert(resData));
+
+    // print('${document.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild.children[1].toString()}');
+
+    return document.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild.children.map((e) => ZipCodeResult(districtName: e.getAttribute('Name'), districtUrl: e.getAttribute('PvueURL'))).where((e) => e.districtUrl != null).toList();
   }
 
 }
