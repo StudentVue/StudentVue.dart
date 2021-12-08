@@ -11,23 +11,22 @@ import 'studentgradedata.dart';
 // }
 
 class StudentVueClient {
-
   final domain;
   String reqURL;
 
   final bool mock;
   final String username, password;
   final bool studentAccount;
-  StudentVueClient(this.username, this.password, this.domain, {this.studentAccount = true, this.mock = false}) {
+  StudentVueClient(this.username, this.password, this.domain,
+      {this.studentAccount = true, this.mock = false}) {
     reqURL = 'https://' + domain + '/Service/PXPCommunication.asmx?WSDL';
   }
 
   final Dio _dio = Dio(BaseOptions(validateStatus: (_) => true));
 
   Future<StudentGradeData> loadGradebook({Function(double) callback}) async {
-
     String resData;
-    if(!mock) {
+    if (!mock) {
       var requestData = '''<?xml version="1.0" encoding="utf-8"?>
     <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
       <soap:Body>
@@ -44,41 +43,35 @@ class StudentVueClient {
     </soap:Envelope>''';
 
       var headers = <String, List<String>>{
-        'Content-Type' : ['text/xml']
+        'Content-Type': ['text/xml']
       };
 
-      var res = await _dio.post(
-          reqURL,
+      var res = await _dio.post(reqURL,
           data: requestData,
-          options: Options(
-              headers: headers
-          ),
-          onSendProgress: (one, two) {
-            if (callback != null) {
-              callback((one / two) * 0.5);
-            }
-          },
-          onReceiveProgress: (one, two) {
-            if (callback != null) {
-              callback((one / two) * 0.5 + 0.5);
-            }
-          }
-      );
+          options: Options(headers: headers), onSendProgress: (one, two) {
+        if (callback != null) {
+          callback((one / two) * 0.5);
+        }
+      }, onReceiveProgress: (one, two) {
+        if (callback != null) {
+          callback((one / two) * 0.5 + 0.5);
+        }
+      });
 
       resData = res.data;
     } else {
       resData = MockResponses.GradebookResponse;
     }
 
-
     final document = XmlDocument.parse(HtmlUnescape().convert(resData));
     // await Future.delayed(const Duration(milliseconds: 1500));
 //    final document = XmlDocument.parse(testData);
-    if(resData.contains('Invalid user id or password')) {
+    if (resData.contains('Invalid user id or password')) {
       return StudentGradeData()..error = 'Invalid user id or password';
     }
-    if(resData.contains('The user name or password is incorrect')) {
-      return StudentGradeData()..error = 'The user name or password is incorrect';
+    if (resData.contains('The user name or password is incorrect')) {
+      return StudentGradeData()
+        ..error = 'The user name or password is incorrect';
     }
     // var currentMP = document.findAllElements('ReportingPeriod').first.getAttribute('GradePeriod');
 
@@ -86,22 +79,24 @@ class StudentVueClient {
 
     var courses = document.findAllElements('Courses').first;
     var classes = List<SchoolClass>();
-    for(int i = 0; i < courses.children.length; i++) {
+    for (int i = 0; i < courses.children.length; i++) {
       XmlNode current = courses.children[i];
 //      debugPrint('adding: $current');
-      if(current.getAttribute('Title') == null) continue;
+      if (current.getAttribute('Title') == null) continue;
       SchoolClass _class = SchoolClass();
       // when regex in doubt
 //      _class.className = current.getAttribute('Title').replaceAll(RegExp('\(([A-Z])\w+\)'), '');
       // take the easy way out
-      _class.className = current.getAttribute('Title').substring(0, current.getAttribute('Title').indexOf('('));
+      _class.className = current
+          .getAttribute('Title')
+          .substring(0, current.getAttribute('Title').indexOf('('));
       _class.period = int.tryParse(current.getAttribute('Period') ?? '0') ?? -1;
       _class.roomNumber = current.getAttribute('Room') ?? 'N/A';
       _class.classTeacher = current.getAttribute('Staff') ?? 'N/A';
       _class.classTeacherEmail = current.getAttribute('StaffEMail') ?? 'N/A';
 
       var mark = current.findAllElements('Mark')?.first;
-      if(mark != null) {
+      if (mark != null) {
         _class.pctGrade = mark.getAttribute('CalculatedScoreRaw');
         _class.letterGrade = mark.getAttribute('CalculatedScoreString');
       }
@@ -112,17 +107,27 @@ class StudentVueClient {
       }
 
       _class.assignmentCategories = List<AssignmentCategory>();
-      for(int i = 0; i < current.children.length; i++) {
-        if(current.children[i].getAttribute('Type') == 'TOTAL') {
-          _class.earnedPoints = double.tryParse(current.children[i].getAttribute('Points') ?? '');
-          _class.earnedPoints = double.tryParse(current.children[i].getAttribute('PointsPossible') ?? '');
-          _class.pctGrade ??= current.children[i].getAttribute('WeightedPct'); // replace only if it's already null
+      for (int i = 0; i < current.children.length; i++) {
+        if (current.children[i].getAttribute('Type') == 'TOTAL') {
+          _class.earnedPoints =
+              double.tryParse(current.children[i].getAttribute('Points') ?? '');
+          _class.earnedPoints = double.tryParse(
+              current.children[i].getAttribute('PointsPossible') ?? '');
+          _class.pctGrade ??= current.children[i]
+              .getAttribute('WeightedPct'); // replace only if it's already null
         } // else {
         AssignmentCategory category = AssignmentCategory();
         category.name = current.children[i].getAttribute('Type');
-        category.weight = double.tryParse((current.children[i].getAttribute('Weight') ?? '').replaceAll('%', '')) ?? 0.0;
-        category.earnedPoints = double.tryParse(current.children[i].getAttribute('Points') ?? '') ?? 0.0;
-        category.possiblePoints = double.tryParse(current.children[i].getAttribute('PointsPossible') ?? '') ?? 0.0;
+        category.weight = double.tryParse(
+                (current.children[i].getAttribute('Weight') ?? '')
+                    .replaceAll('%', '')) ??
+            0.0;
+        category.earnedPoints =
+            double.tryParse(current.children[i].getAttribute('Points') ?? '') ??
+                0.0;
+        category.possiblePoints = double.tryParse(
+                current.children[i].getAttribute('PointsPossible') ?? '') ??
+            0.0;
         _class.assignmentCategories.add(category);
 //          debugPrint('added category for class ${_class.className} : ${category}');
         // }
@@ -135,26 +140,44 @@ class StudentVueClient {
       }
 
       _class.assignments = List<Assignment>();
-      for(int i = 0; i < current.children.length; i++) {
-        Assignment ass = Assignment();
-        ass.assignmentName = current.children[i].getAttribute('Measure') ?? 'Assignment';
-        ass.category = current.children[i].getAttribute('Type') ?? 'No Category';
+      for (var i = 0; i < current.children.length; i++) {
+        var ass = Assignment();
+        ass.assignmentName =
+            current.children[i].getAttribute('Measure') ?? 'Assignment';
+        ass.notes = current.children[i].getAttribute('Notes') ?? '';
+        ass.category =
+            current.children[i].getAttribute('Type') ?? 'No Category';
         ass.date = current.children[i].getAttribute('DueDate') ?? '';
-        ass.earnedPoints = current.children[i].getAttribute('Score') == 'Not Graded' ? -1 : double.tryParse((current.children[i].getAttribute('Points') ?? 'N/A').replaceAll(' ', '').split('/')[0]) ?? -1;
-        if(current.children[i].getAttribute('Score') == 'Not Graded') {
-          ass.possiblePoints = double.tryParse((current.children[i].getAttribute('Points') ?? '').replaceAll(' Points Possible', ''));
+        ass.earnedPoints =
+            current.children[i].getAttribute('Score') == 'Not Graded'
+                ? -1
+                : double.tryParse(
+                        (current.children[i].getAttribute('Points') ?? 'N/A')
+                            .replaceAll(' ', '')
+                            .split('/')[0]) ??
+                    -1;
+        if (current.children[i].getAttribute('Score') == 'Not Graded') {
+          ass.possiblePoints = double.tryParse(
+              (current.children[i].getAttribute('Points') ?? '')
+                  .replaceAll(' Points Possible', ''));
         } else {
 //          ass.possiblePoints = double.tryParse(current.children[i].getAttribute('Score') ?? '') == null ? -1 : double.tryParse((current.children[i].getAttribute('Points') ?? 'N/A').replaceAll(' ', '').split('/').last) ?? -1;
-          if(double.tryParse(current.children[i].getAttribute('Score') ?? 'N/A') == null) {
-            List<String> pointsStr = (current.children[i].getAttribute('Points') ?? 'N/A').replaceAll(' ', '').split('/');
-            if(pointsStr.length < 2) {
+          if (double.tryParse(
+                  current.children[i].getAttribute('Score') ?? 'N/A') ==
+              null) {
+            var pointsStr =
+                (current.children[i].getAttribute('Points') ?? 'N/A')
+                    .replaceAll(' ', '')
+                    .split('/');
+            if (pointsStr.length < 2) {
               ass.possiblePoints = -1;
             } else {
-              double pp = double.tryParse(pointsStr[1]);
+              var pp = double.tryParse(pointsStr[1]);
               ass.possiblePoints = pp ?? -1;
             }
           } else {
-            ass.possiblePoints = double.tryParse(current.children[i].getAttribute('Score') ?? 'N/A');
+            ass.possiblePoints = double.tryParse(
+                current.children[i].getAttribute('Score') ?? 'N/A');
           }
         }
         _class.assignments.add(ass);
@@ -168,9 +191,8 @@ class StudentVueClient {
   }
 
   Future<StudentData> loadStudentData({Function(double) callback}) async {
-
     String resData;
-    if(!mock) {
+    if (!mock) {
       var requestData = '''<?xml version="1.0" encoding="utf-8"?>
   <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
       <soap:Body>
@@ -186,28 +208,21 @@ class StudentVueClient {
       </soap:Body>
   </soap:Envelope>''';
 
-
       var headers = <String, List<String>>{
-        'Content-Type' : ['text/xml']
+        'Content-Type': ['text/xml']
       };
 
-      var res = await _dio.post(
-          reqURL,
+      var res = await _dio.post(reqURL,
           data: requestData,
-          options: Options(
-              headers: headers
-          ),
-          onSendProgress: (one, two) {
-            if (callback != null) {
-              callback((one / two) * 0.5);
-            }
-          },
-          onReceiveProgress: (one, two) {
-            if (callback != null) {
-              callback((one / two) * 0.5 + 0.5);
-            }
-          }
-      );
+          options: Options(headers: headers), onSendProgress: (one, two) {
+        if (callback != null) {
+          callback((one / two) * 0.5);
+        }
+      }, onReceiveProgress: (one, two) {
+        if (callback != null) {
+          callback((one / two) * 0.5 + 0.5);
+        }
+      });
       resData = res.data;
     } else {
       resData = MockResponses.StudentInfoResponse;
@@ -216,7 +231,8 @@ class StudentVueClient {
     final document = XmlDocument.parse(HtmlUnescape().convert(resData));
 
     // the StudentInfo element is inside four other dumb elements
-    final el = document.root.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild;
+    final el = document.root.firstElementChild.firstElementChild
+        .firstElementChild.firstElementChild.firstElementChild;
 
     return StudentData(
       lockerInfo: el.getElement('LockerInfoRecords')?.innerText,
@@ -244,10 +260,10 @@ class StudentVueClient {
     );
   }
 
-  static Future<List<ZipCodeResult>> loadDistrictsFromZip(String zip, {Function(double) callback, bool mock = false}) async {
-
+  static Future<List<ZipCodeResult>> loadDistrictsFromZip(String zip,
+      {Function(double) callback, bool mock = false}) async {
     String resData;
-    if(!mock) {
+    if (!mock) {
       var requestData = '''<?xml version="1.0" encoding="utf-8"?>
 <v:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://www.w3.org/2001/XMLSchema" xmlns:c="http://schemas.xmlsoap.org/soap/encoding/" xmlns:v="http://schemas.xmlsoap.org/soap/envelope/">
     <v:Header />
@@ -265,29 +281,23 @@ class StudentVueClient {
     </v:Body>
 </v:Envelope>''';
 
-
       var headers = <String, List<String>>{
-        'Content-Type' : ['text/xml']
+        'Content-Type': ['text/xml']
       };
 
       final _dio = Dio(BaseOptions(validateStatus: (_) => true));
       var res = await _dio.post(
           'https://support.edupoint.com/Service/HDInfoCommunication.asmx',
           data: requestData,
-          options: Options(
-              headers: headers
-          ),
-          onSendProgress: (one, two) {
-            if (callback != null) {
-              callback((one / two) * 0.5);
-            }
-          },
-          onReceiveProgress: (one, two) {
-            if (callback != null) {
-              callback((one / two) * 0.5 + 0.5);
-            }
-          }
-      );
+          options: Options(headers: headers), onSendProgress: (one, two) {
+        if (callback != null) {
+          callback((one / two) * 0.5);
+        }
+      }, onReceiveProgress: (one, two) {
+        if (callback != null) {
+          callback((one / two) * 0.5 + 0.5);
+        }
+      });
       resData = res.data;
     } else {
       resData = MockResponses.ZipCodeResponse;
@@ -297,7 +307,12 @@ class StudentVueClient {
 
     // print('${document.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild.children[1].toString()}');
 
-    return document.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild.firstElementChild.children.map((e) => ZipCodeResult(districtName: e.getAttribute('Name'), districtUrl: e.getAttribute('PvueURL'))).where((e) => e.districtUrl != null).toList();
+    return document.firstElementChild.firstElementChild.firstElementChild
+        .firstElementChild.firstElementChild.firstElementChild.children
+        .map((e) => ZipCodeResult(
+            districtName: e.getAttribute('Name'),
+            districtUrl: e.getAttribute('PvueURL')))
+        .where((e) => e.districtUrl != null)
+        .toList();
   }
-
 }
