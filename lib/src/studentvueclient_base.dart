@@ -78,12 +78,12 @@ class StudentVueClient {
     var svData = StudentGradeData();
 
     var courses = document.findAllElements('Courses').first;
-    var classes = List<SchoolClass>();
-    for (int i = 0; i < courses.children.length; i++) {
-      XmlNode current = courses.children[i];
+    var classes = <SchoolClass>[];
+    for (var i = 0; i < courses.children.length; i++) {
+      var current = courses.children[i];
 //      debugPrint('adding: $current');
       if (current.getAttribute('Title') == null) continue;
-      SchoolClass _class = SchoolClass();
+      var _class = SchoolClass();
       // when regex in doubt
 //      _class.className = current.getAttribute('Title').replaceAll(RegExp('\(([A-Z])\w+\)'), '');
       // take the easy way out
@@ -106,8 +106,8 @@ class StudentVueClient {
         continue;
       }
 
-      _class.assignmentCategories = List<AssignmentCategory>();
-      for (int i = 0; i < current.children.length; i++) {
+      _class.assignmentCategories = <AssignmentCategory>[];
+      for (var i = 0; i < current.children.length; i++) {
         if (current.children[i].getAttribute('Type') == 'TOTAL') {
           _class.earnedPoints =
               double.tryParse(current.children[i].getAttribute('Points') ?? '');
@@ -116,7 +116,7 @@ class StudentVueClient {
           _class.pctGrade ??= current.children[i]
               .getAttribute('WeightedPct'); // replace only if it's already null
         } // else {
-        AssignmentCategory category = AssignmentCategory();
+        var category = AssignmentCategory();
         category.name = current.children[i].getAttribute('Type');
         category.weight = double.tryParse(
                 (current.children[i].getAttribute('Weight') ?? '')
@@ -139,7 +139,7 @@ class StudentVueClient {
         continue;
       }
 
-      _class.assignments = List<Assignment>();
+      _class.assignments = <Assignment>[];
       for (var i = 0; i < current.children.length; i++) {
         var ass = Assignment();
         ass.assignmentName =
